@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProFinance V17 | Ultimate</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+    <header>
+        <div class="logo"><i class="fa-solid fa-infinity"></i> ProFinance V17</div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-icon" onclick="app.shareSummary()" title="Share"><i class="fa-solid fa-share-nodes"></i></button>
+            <button class="btn-icon" onclick="app.togglePrivacy()"><i class="fa-solid fa-eye-slash"></i></button>
+            <button class="btn-icon" onclick="app.toggleTheme()"><i class="fa-solid fa-moon"></i></button>
+            <button class="btn-icon" onclick="app.openModal('settingsModal')"><i class="fa-solid fa-database"></i></button>
+            <button class="btn-primary btn" onclick="app.openTxnModal()">+ Add</button>
+        </div>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="nav-btn active" onclick="app.switchTab('dashboard', this)">Dashboard</button>
+        <button class="nav-btn" onclick="app.switchTab('transactions', this)">Transactions</button>
+        <button class="nav-btn" onclick="app.switchTab('analytics', this)">Analytics</button>
+        <button class="nav-btn" onclick="app.switchTab('planning', this)">Planning & Tax</button>
+        <button class="nav-btn" onclick="app.switchTab('wealth', this)">Wealth</button>
+        <button class="nav-btn" onclick="app.switchTab('calculator', this)">Calculator</button>
+        <button class="nav-btn" onclick="app.switchTab('reports', this)">Reports</button>
+    </div>
+
+    <!-- 1. DASHBOARD -->
+    <div id="view-dashboard" class="view-section">
+        <div class="stat-grid">
+            <div class="mini-stat"><div>Last 7 Days</div><div class="mini-val text-danger money-value" id="d-week">0</div></div>
+            <div class="mini-stat"><div>This Month</div><div class="mini-val text-danger money-value" id="d-month">0</div></div>
+            <div class="mini-stat"><div>This Year</div><div class="mini-val text-danger money-value" id="d-year">0</div></div>
+            <div class="mini-stat"><div>Net Savings</div><div class="mini-val text-success money-value" id="d-save">0</div></div>
+        </div>
+        <div class="grid">
+            <div class="card">
+                <h3>Total Balance</h3>
+                <div class="money-value" style="font-size:3rem; margin:15px 0;" id="d-balance">0</div>
+                <div class="flex-between"><span>Income: <span class="text-success money-value" id="d-inc">0</span></span><span>Expense: <span class="text-danger money-value" id="d-exp">0</span></span></div>
+            </div>
+            <div class="card">
+                <div class="flex-between"><h3>Budgets</h3><button class="action-btn" onclick="app.openModal('budgetModal')"><i class="fa-solid fa-pen"></i></button></div>
+                <div id="budget-list" style="margin-top:15px; display:flex; flex-direction:column; gap:10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. TRANSACTIONS -->
+    <div id="view-transactions" class="view-section" style="display:none;">
+        <div class="card">
+            <div class="flex-between" style="margin-bottom:20px; gap:10px; flex-wrap:wrap;">
+                <input type="text" id="txn-search" placeholder="Search notes..." onkeyup="app.renderTxn()" style="margin:0; flex:1;">
+                <select id="txn-filter" onchange="app.renderTxn()" style="margin:0; width:auto;"><option value="all">All</option></select>
+            </div>
+            <div id="txn-container"></div>
+        </div>
+    </div>
+
+    <!-- 3. ANALYTICS -->
+    <div id="view-analytics" class="view-section" style="display:none;">
+        <div class="grid">
+            <div class="card"><h3>Trends</h3><canvas id="chart-trend"></canvas></div>
+            <div class="card"><h3>Category Split</h3><canvas id="chart-cat"></canvas></div>
+        </div>
+        <div class="card" style="margin-bottom:25px;">
+            <div class="flex-between"><h3>Spending Heatmap</h3><input type="month" id="cal-month" style="width:auto; margin:0;" onchange="app.renderAnalytics()"></div>
+            <div class="cal-wrapper">
+                <div class="cal-grid" id="cal-grid"></div>
+                <div style="display:flex; justify-content:center; gap:15px; margin-top:10px; font-size:0.8rem; color:var(--text-sec);">
+                    <span style="display:flex; align-items:center; gap:5px;"><div style="width:10px;height:10px;background:var(--success);border-radius:2px;"></div> Low</span>
+                    <span style="display:flex; align-items:center; gap:5px;"><div style="width:10px;height:10px;background:var(--warning);border-radius:2px;"></div> Med</span>
+                    <span style="display:flex; align-items:center; gap:5px;"><div style="width:10px;height:10px;background:var(--danger);border-radius:2px;"></div> High</span>
+                </div>
+            </div>
+        </div>
+        <div class="card"><h3>Top Merchants</h3><div id="merchant-list" style="margin-top:15px;"></div></div>
+    </div>
+
+    <!-- 4. PLANNING & TAX -->
+    <div id="view-planning" class="view-section" style="display:none;">
+        <div class="grid">
+            <!-- SHOPPING -->
+            <div class="card">
+                <div class="flex-between" style="margin-bottom:15px;"><h3>Shopping List</h3><button class="btn-primary" onclick="app.openModal('shopModal')" style="padding:10px 20px !important; font-size:0.9rem !important;">+ Add</button></div>
+                <div id="shop-container"></div>
+            </div>
+            
+            <!-- TAX CALCULATOR (UPGRADED) -->
+            <div class="card">
+                <h3>🏛️ Tax Calculator</h3>
+                <p style="font-size:0.85rem; color:var(--text-sec); margin-bottom:15px;">Enter Salary to Auto-Calculate Tax, or Enter Custom % Rate.</p>
+                <label style="font-size:0.8rem; margin-left:5px;">Annual Salary (₹)</label>
+                <input type="number" id="tax-inc" placeholder="e.g. 1200000">
+                
+                <label style="font-size:0.8rem; margin-left:5px;">Tax Rate (%)</label>
+                <input type="number" id="tax-rate" placeholder="e.g. 15" onkeyup="app.calcTaxCustom()">
+                
+                <button class="btn-primary" style="width:100%" onclick="app.calcTaxSlab()">Auto-Calculate (Slab)</button>
+                
+                <div id="tax-res" style="text-align:center; padding:15px; font-weight:bold; margin-top:10px; display:none; background:var(--bg-body); border-radius:16px;"></div>
+            </div>
+
+            <!-- EMI -->
+            <div class="card">
+                <h3>EMI Calculator</h3>
+                <input type="number" id="emi-p" placeholder="Loan Amount" style="margin-top:15px;">
+                <div style="display:flex; gap:10px;"><input type="number" id="emi-r" placeholder="Rate %"><input type="number" id="emi-n" placeholder="Years"></div>
+                <button class="btn-primary" style="width:100%" onclick="app.calcEMI()">Calculate</button>
+                <div id="emi-res" style="text-align:center; padding:15px; font-weight:bold; margin-top:10px; display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. WEALTH -->
+    <div id="view-wealth" class="view-section" style="display:none;">
+        <div class="grid">
+            <div class="card">
+                <div class="flex-between"><h3>Net Worth</h3><button class="btn-primary" onclick="app.openModal('assetModal')" style="padding:10px 20px !important; font-size:0.9rem !important;">Update</button></div>
+                <div class="money-value" style="font-size:2.5rem; color:var(--primary); margin:20px 0;" id="w-networth">0</div>
+                <div class="flex-between"><div>Assets: <span class="text-success money-value" id="w-assets">0</span></div><div>Liabilities: <span class="text-danger money-value" id="w-liabs">0</span></div></div>
+            </div>
+            <div class="card"><h3>Assets</h3><div id="asset-list" style="margin-top:15px;"></div></div>
+        </div>
+    </div>
+
+    <!-- 6. CALCULATOR -->
+    <div id="view-calculator" class="view-section" style="display:none;">
+        <div class="card" style="display:flex; justify-content:center; background:transparent; border:none; box-shadow:none;">
+            <div class="calc-wrapper">
+                <div id="calc-display" class="calc-screen">0</div>
+                <div class="calc-grid">
+                    <button class="calc-btn op" onclick="app.calcClr()">C</button><button class="calc-btn op" onclick="app.calcBack()">⌫</button><button class="calc-btn op" onclick="app.calcIn('%')">%</button><button class="calc-btn op" onclick="app.calcIn('/')">÷</button>
+                    <button class="calc-btn" onclick="app.calcIn('7')">7</button><button class="calc-btn" onclick="app.calcIn('8')">8</button><button class="calc-btn" onclick="app.calcIn('9')">9</button><button class="calc-btn op" onclick="app.calcIn('*')">×</button>
+                    <button class="calc-btn" onclick="app.calcIn('4')">4</button><button class="calc-btn" onclick="app.calcIn('5')">5</button><button class="calc-btn" onclick="app.calcIn('6')">6</button><button class="calc-btn op" onclick="app.calcIn('-')">-</button>
+                    <button class="calc-btn" onclick="app.calcIn('1')">1</button><button class="calc-btn" onclick="app.calcIn('2')">2</button><button class="calc-btn" onclick="app.calcIn('3')">3</button><button class="calc-btn op" onclick="app.calcIn('+')">+</button>
+                    <button class="calc-btn zero" onclick="app.calcIn('0')">0</button><button class="calc-btn" onclick="app.calcIn('.')">.</button><button class="calc-btn eq" onclick="app.calcEq()">=</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. REPORTS -->
+    <div id="view-reports" class="view-section" style="display:none;">
+        <div class="card" style="max-width:600px; margin:0 auto;">
+            <h2>Export Report</h2>
+            <p style="margin:10px 0; color:var(--text-sec)">Generate detailed PDF/CSV reports.</p>
+            <label>Select Month</label>
+            <input type="month" id="rep-month">
+            <button class="btn-primary" style="width:100%; margin-bottom:15px;" onclick="app.genPDF()"><i class="fa-solid fa-file-pdf"></i> Download PDF Report</button>
+            <button class="btn-outline" style="width:100%" onclick="app.genCSV()"><i class="fa-solid fa-file-csv"></i> Download CSV Export</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODALS -->
+<div id="txnModal" class="modal">
+    <div class="modal-content">
+        <h2 id="txn-title">Transaction</h2>
+        <form onsubmit="app.saveTxn(event)">
+            <input type="hidden" id="inp-id">
+            <div style="display:flex; gap:10px;"><select id="inp-type" onchange="app.updateCats()"><option value="expense">Expense</option><option value="income">Income</option></select><select id="inp-curr"><option value="INR">INR</option><option value="USD">USD</option></select></div>
+            <input type="number" id="inp-amt" placeholder="Amount" step="0.01" required>
+            <input type="date" id="inp-date" required>
+            <input type="text" id="inp-note" placeholder="Description" onblur="app.smartCat()">
+            <select id="inp-cat"></select>
+            <div style="margin-bottom:20px;"><input type="checkbox" id="inp-rec" style="width:auto;"> Recurring</div>
+            <div class="modal-btns"><button type="button" class="btn btn-outline" onclick="app.closeModal('txnModal')">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+    </div>
+</div>
+
+<div id="assetModal" class="modal"><div class="modal-content"><h2>Wealth Assets</h2><div id="asset-inps" style="max-height:300px; overflow-y:auto; margin-bottom:15px;"></div><button class="btn-primary" style="width:100%" onclick="app.addAssetItem()">+ Add Item</button><div class="modal-btns"><button onclick="app.closeModal('assetModal')" class="btn btn-outline">Cancel</button><button onclick="app.saveAssets()" class="btn btn-primary">Save</button></div></div></div>
+<div id="shopModal" class="modal"><div class="modal-content"><h2>Add Item</h2><input id="shop-name" placeholder="Name"><input id="shop-est" placeholder="Cost"><div class="modal-btns"><button onclick="app.closeModal('shopModal')" class="btn btn-outline">Cancel</button><button onclick="app.addShop()" class="btn btn-primary">Add</button></div></div></div>
+<div id="budgetModal" class="modal"><div class="modal-content"><h2>Budgets</h2><div id="budget-inp-container" style="max-height:300px; overflow-y:auto;"></div><div class="modal-btns"><button onclick="app.closeModal('budgetModal')" class="btn btn-outline">Close</button><button onclick="app.saveBudgets()" class="btn btn-primary">Save</button></div></div></div>
+<div id="settingsModal" class="modal"><div class="modal-content"><h2>Data</h2><div style="display:flex; flex-direction:column; gap:15px; margin-top:20px;"><button class="btn btn-outline" onclick="app.backup()"><i class="fa-solid fa-download"></i> Backup JSON</button><button class="btn btn-outline" onclick="document.getElementById('res-file').click()"><i class="fa-solid fa-upload"></i> Restore JSON</button><input type="file" id="res-file" style="display:none" onchange="app.restore(this)"><button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger)!important" onclick="app.reset()"><i class="fa-solid fa-trash"></i> Reset All</button></div><button class="btn btn-outline" style="width:100%; margin-top:20px;" onclick="app.closeModal('settingsModal')">Close</button></div></div>
+
+
+
+    <script src="script.js"></script>
+</body>
+</html>
